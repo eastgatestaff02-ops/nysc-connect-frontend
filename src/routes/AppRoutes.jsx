@@ -2,17 +2,17 @@ import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useLocation as useUserLocation } from "../contexts/LocationContext";
 
-import LoginPage from "../pages/LoginPage";
-import RegisterPage from "../pages/RegisterPage";
-import StatePage from "../pages/location/StatePage";
-import LgaPage from "../pages/location/LgaPage";
-import PpaPage from "../pages/location/PpaPage";
-import HomePage from "../pages/HomePage";
-import AccommodationDetailPage from "../pages/AccommodationDetailPage";
-import SavedPage from "../pages/SavedPage";
-import LocalGuidePage from "../pages/LocalGuidePage";
-import ReportPage from "../pages/ReportPage";
-import AdminReportsPage from "../pages/admin/AdminReportsPage";
+import LoginPage from "../pages/LoginPage";                    // ✅ PascalCase
+import RegisterPage from "../pages/RegisterPage";              // ✅ PascalCase
+import StatePage from "../pages/Location/StatePage";           // ✅ Location (capital L)
+import LgaPage from "../pages/Location/LgaPage";               // ✅
+import PpaPage from "../pages/Location/PpaPage";               // ✅
+import HomePage from "../pages/HomePage";                      // ✅
+import AccommodationDetailPage from "../pages/AccommodationDetailPage"; // ✅
+import SavedPage from "../pages/SavedPage";                    // ✅
+import LocalGuidePage from "../pages/LocalGuidePage";          // ✅
+import ReportPage from "../pages/ReportPage";                  // ✅
+import AdminReportsPage from "../pages/admin/AdminReportsPage"; // ⚠️ lowercase "admin"
 
 function Protected({ requireLocation = false, requireAdmin = false }) {
   const { token, isLoading, isAdmin } = useAuth();
