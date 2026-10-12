@@ -1,44 +1,62 @@
 import axios from "axios";
 import { mockRequest } from "./mockApi";
 
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1";
+
 const MOCK = import.meta.env.VITE_MOCK_API === "true";
 
-// ─── Mock adapter ────────────────────────────────────────
-// When MOCK is true, this replaces the real network layer.
-// The rest of the app calls axios exactly as it did before.
-const mockAdapter = async (config) => {
-  try {
-    const data = await mockRequest(config);
-    return { data, status: 200, statusText: "OK", headers: {}, config };
-  } catch (error) {
-    throw error; // axios will route this to response interceptor
-  }
-};
+/* ============================================================
+   Mock adapter — installed only when VITE_MOCK_API=true.
+   Delegates every request to mockRequest in mockApi.js.
+   ============================================================ */
+async function mockAdapter(config) {
+  return mockRequest(config);
+}
 
+/* ============================================================
+   Axios instance
+   ============================================================ */
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api/v1",
-  timeout: 15000,
+  baseURL: API_BASE,
+  withCredentials: true,
   headers: { "Content-Type": "application/json" },
   ...(MOCK ? { adapter: mockAdapter } : {}),
 });
 
+/* ---------- Request interceptor: inject Bearer token ---------- */
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem("access_token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
+/* ============================================================
+   Envelope unwrap — single place where { status, message, data }
+   is stripped. Pages and contexts receive the inner payload.
+   ============================================================ */
+export function unwrap(response) {
+  return response?.data?.data ?? response?.data;
+}
+
+/* ---------- Response interceptor: unwrap + handle 401/403 ---------- */
 apiClient.interceptors.response.use(
-  (res) => res,
+  (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const message =
+      error.response?.data?.message || error.message || "Request failed";
+
+    if (status === 401) {
       localStorage.removeItem("access_token");
       localStorage.removeItem("user");
+      // Do not redirect here — let route guards handle it
     }
-    return Promise.reject(error);
+    // 403 is left to the caller so pages can show an error state
+    return Promise.reject(new Error(message));
   }
 );
 
-export const unwrap = (response) => response.data?.data ?? response.data;
-
-export default apiClient; 
+export default apiClient;
