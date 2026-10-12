@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import apiClient, { unwrap } from "../services/apiClient";
+import apiClient from "../services/apiClient";
 
 const LocationContext = createContext(null);
 
@@ -9,6 +9,7 @@ export function LocationProvider({ children }) {
   const [location, setLocation] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  /* ---------- Session rehydrate on mount ---------- */
   useEffect(() => {
     (async () => {
       try {
@@ -22,9 +23,11 @@ export function LocationProvider({ children }) {
           if (storedLocation) setLocation(JSON.parse(storedLocation));
 
           const res = await apiClient.get("/auth/me");
-          const { user: fresh } = unwrap(res);
-          setUser(fresh);
-          localStorage.setItem("user", JSON.stringify(fresh));
+          const fresh = res?.data?.data?.user ?? res?.data?.user ?? res?.user;
+          if (fresh) {
+            setUser(fresh);
+            localStorage.setItem("user", JSON.stringify(fresh));
+          }
         }
       } catch {
         localStorage.removeItem("access_token");
@@ -39,24 +42,25 @@ export function LocationProvider({ children }) {
     })();
   }, []);
 
+  /* ---------- Auth actions ---------- */
   const register = async (payload) => {
     const res = await apiClient.post("/auth/register", payload);
-    const { user: u, token: t } = unwrap(res);
-    localStorage.setItem("access_token", t);
-    localStorage.setItem("user", JSON.stringify(u));
-    setToken(t);
-    setUser(u);
-    return u;
+    const data = res?.data?.data ?? res?.data ?? res;
+    localStorage.setItem("access_token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+    setToken(data.token);
+    setUser(data.user);
+    return data.user;
   };
 
   const login = async ({ email, password }) => {
     const res = await apiClient.post("/auth/login", { email, password });
-    const { user: u, token: t } = unwrap(res);
-    localStorage.setItem("access_token", t);
-    localStorage.setItem("user", JSON.stringify(u));
-    setToken(t);
-    setUser(u);
-    return u;
+    const data = res?.data?.data ?? res?.data ?? res;
+    localStorage.setItem("access_token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+    setToken(data.token);
+    setUser(data.user);
+    return data.user;
   };
 
   const logout = () => {
@@ -68,6 +72,7 @@ export function LocationProvider({ children }) {
     setLocation(null);
   };
 
+  /* ---------- Location actions ---------- */
   const saveLocation = (loc) => {
     setLocation(loc);
     localStorage.setItem("user_location", JSON.stringify(loc));
@@ -100,8 +105,9 @@ export function LocationProvider({ children }) {
   );
 }
 
-export function useLocation() {
+export function useUserLocation() {
   const ctx = useContext(LocationContext);
-  if (!ctx) throw new Error("useLocation must be used within LocationProvider");
+  if (!ctx)
+    throw new Error("useUserLocation must be used within LocationProvider");
   return ctx;
 }
